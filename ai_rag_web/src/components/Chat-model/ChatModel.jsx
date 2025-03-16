@@ -63,14 +63,10 @@ const ChatModel = () => {
     }
   };
 
-
-
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
   
-    // Format current date-time with AM/PM
     const currentTime = new Date();
     
     // Add user message
@@ -93,13 +89,11 @@ const ChatModel = () => {
     setLoading(true);
   
     try {
-      // Updated API endpoint to match your backend Spring controller
       const response = await fetch(`http://localhost:8080/web-ai-rag/chat?query=${encodeURIComponent(query.trim())}`, {
-        method: 'GET', // Changed to GET to match your backend controller
+        method: 'GET', 
         headers: { 'Content-Type': 'application/json' }
       });
-
-
+      
       if (response.ok) {
         const rawData = await response.text(); // Get raw text from backend
         
@@ -301,61 +295,40 @@ const ChatModel = () => {
 
 
           {/* Document list */}
-<div className="p-4 border-b border-gray-700">
-  <h2 className="font-medium text-md mb-3 text-gray-300">Your Documents</h2>
-</div>
-<div className="flex-1 overflow-y-auto p-2">
-  {documents.length === 0 ? (
-    <div>
-      <p className="text-sm text-gray-400 p-3">No user documents uploaded</p>
-      {/* Add the default PDF document */}
-      <div className="mt-2">
-        <h3 className="text-sm text-gray-300 px-3 pb-2">Available Resources:</h3>
-        <button 
-          onClick={openPdfOverlay} 
-          className="flex items-center text-sm text-gray-300 p-2 hover:bg-gray-700 rounded transition-colors w-full text-left"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Generative-AI-and-LLMs-for-Dummies.pdf
-        </button>
-      </div>
-    </div>
-  ) : (
-    <ul className="space-y-1">
-      {/* Default PDF document always available */}
-      <li className="text-sm text-gray-300 p-2 hover:bg-gray-700 rounded transition-colors flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <button onClick={openPdfOverlay} className="text-left text-gray-300 hover:text-white">
-          Generative-AI-and-LLMs-for-Dummies.pdf
-        </button>
-      </li>
-      
-      {/* User uploaded documents */}
-      {documents.map((doc, index) => (
-        <li key={index} className="text-sm text-gray-300 p-2 hover:bg-gray-700 rounded transition-colors flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          {doc.filename}
-        </li>
-      ))}
-    </ul>
-  )}
-</div>
-
-          {/* Document list */}
-          {/* <div className="p-4 border-b border-gray-700">
+          <div className="p-4 border-b border-gray-700">
             <h2 className="font-medium text-md mb-3 text-gray-300">Your Documents</h2>
           </div>
           <div className="flex-1 overflow-y-auto p-2">
             {documents.length === 0 ? (
-              <p className="text-sm text-gray-400 p-3">No documents uploaded</p>
+              <div>
+                <p className="text-sm text-gray-400 p-3">No user documents uploaded</p>
+                {/* Add the default PDF document */}
+                <div className="mt-2">
+                  <h3 className="text-sm text-gray-300 px-3 pb-2">Available Resources:</h3>
+                  <button 
+                    onClick={openPdfOverlay} 
+                    className="flex items-center text-sm text-gray-300 p-2 hover:bg-gray-700 rounded transition-colors w-full text-left"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Generative-AI-and-LLMs-for-Dummies.pdf
+                  </button>
+                </div>
+              </div>
             ) : (
               <ul className="space-y-1">
+                {/* Default PDF document always available */}
+                <li className="text-sm text-gray-300 p-2 hover:bg-gray-700 rounded transition-colors flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <button onClick={openPdfOverlay} className="text-left text-gray-300 hover:text-white">
+                    Generative-AI-and-LLMs-for-Dummies.pdf
+                  </button>
+                </li>
+                
+                {/* User uploaded documents */}
                 {documents.map((doc, index) => (
                   <li key={index} className="text-sm text-gray-300 p-2 hover:bg-gray-700 rounded transition-colors flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -366,7 +339,8 @@ const ChatModel = () => {
                 ))}
               </ul>
             )}
-          </div> */}
+          </div>
+
           <div className='text-sm text-gray-400 p-3'>
           ©{new Date().getFullYear()} | Developed by Sumer Khan
           </div>
@@ -417,7 +391,6 @@ const ChatModel = () => {
                       )}
                     </div>
                     
-                    {/* Timestamp */}
                     <div className="text-xs mt-2 opacity-70">
                       {formatTimestamp(message.timestamp)}
                     </div>
@@ -473,7 +446,6 @@ const ChatModel = () => {
             </div>
             <div className="flex-1 overflow-hidden">
         
-              {/* Direct embedding if your backend changes to inline */}
               <iframe
                 src="http://localhost:8080/web-ai-rag/generative-ai"
                 className="w-full h-full"
