@@ -1,15 +1,20 @@
 import './App.css';
+import {BrowserRouter as Router, Routes, Route} from "react-router-dom";
 import ChatModel from './components/Chat-model/ChatModel';
-// import VectorEmbedding from "./components/vecto/r-embedding/VectorEmb";
+import VectorEmbedding from "./components/vector-embedding/VectorEmb";
+import LoginForm from './components/Login-page/LoginForm';
 
 const App = () => {
   
 
   return (
-    <div className='app-root'>
-      <ChatModel/>
-      {/* <VectorEmbedding/> */}
-    </div>
+    <Router>
+      <Routes>
+        <Route path = "login" element = {<LoginForm/>}/>
+        <Route path = "/" element = {<ChatModel/>} / >
+        <Route path = "/vector" element = {<VectorEmbedding/>} / >
+      </Routes>
+    </Router>
   );
 }
 

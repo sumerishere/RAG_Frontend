@@ -1,5 +1,6 @@
-import { Bot, Send } from 'lucide-react';
+import { Bot, Send, LogOut  } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 
 const ChatModel = () => {
   const [query, setQuery] = useState('');
@@ -340,8 +341,14 @@ const ChatModel = () => {
               </ul>
             )}
           </div>
-
-          <div className='text-sm text-gray-400 p-3'>
+          <div className='px-4'>
+            <Link to="/login">
+              <button className="w-full bg-gray-600 text-md hover:bg-gray-700 text-white rounded-md py-2 px-4 flex items-center justify-center transition-colors">
+                Log-Out <span className='ml-2'>< LogOut/></span>
+              </button>
+            </Link>
+          </div>
+          <div className='text-sm text-gray-400 p-3 mt-2 mb-5'>
           ©{new Date().getFullYear()} | Developed by Sumer Khan
           </div>
         </aside>
