@@ -33,7 +33,7 @@ const LoginForm = () => {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 800));
         localStorage.setItem("token", "sample-token-12345");
-        window.location.href = "/";
+        window.location.href = "/home";
         return;
       }
 

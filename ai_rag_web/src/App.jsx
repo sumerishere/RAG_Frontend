@@ -10,8 +10,8 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path = "login" element = {<LoginForm/>}/>
-        <Route path = "/" element = {<ChatModel/>} / >
+        <Route path = "/" element = {<LoginForm/>}/>
+        <Route path = "/home" element = {<ChatModel/>} / >
         <Route path = "/vector" element = {<VectorEmbedding/>} / >
       </Routes>
     </Router>
