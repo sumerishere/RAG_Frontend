@@ -1,5 +1,7 @@
 import "./LoginForm.css";   
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from 'react-router-dom';
+
 
 const LoginForm = () => {
   const [formData, setFormData] = useState({
@@ -9,6 +11,18 @@ const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Only redirect to /home if we're on the login page and already authenticated
+    const token = localStorage.getItem('token');
+    if (token && location.pathname === '/') {
+      navigate('/home', { replace: true });
+    }
+  }, [navigate, location]);
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;
