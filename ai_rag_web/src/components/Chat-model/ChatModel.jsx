@@ -1,4 +1,4 @@
-import { Bot, Send, LogOut  } from 'lucide-react';
+import { Bot, Send, LogOut } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -11,6 +11,10 @@ const ChatModel = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef(null);
 
+  // Add state for chat history and current chat ID
+  const [chatHistory, setChatHistory] = useState([]);
+  const [currentChatId, setCurrentChatId] = useState(null);
+
   const [isPdfOverlayOpen, setIsPdfOverlayOpen] = useState(false);
 
   const openPdfOverlay = (e) => {
@@ -22,25 +26,53 @@ const ChatModel = () => {
     setIsPdfOverlayOpen(false);
   };
 
-  // Load previous messages from local storage
+  // Load chat history and current chat from local storage
   useEffect(() => {
-    const savedMessages = localStorage.getItem('chatMessages');
-    if (savedMessages) {
-      setMessages(JSON.parse(savedMessages));
+    const savedChatHistory = localStorage.getItem('chatHistory');
+    const savedCurrentChatId = localStorage.getItem('currentChatId');
+    
+    if (savedChatHistory) {
+      const parsedChatHistory = JSON.parse(savedChatHistory);
+      setChatHistory(parsedChatHistory);
+      
+      // Set current chat ID from storage or use the first chat in history
+      if (savedCurrentChatId && parsedChatHistory.some(chat => chat.id === savedCurrentChatId)) {
+        setCurrentChatId(savedCurrentChatId);
+      } else if (parsedChatHistory.length > 0) {
+        setCurrentChatId(parsedChatHistory[0].id);
+      } else {
+        // If no chat history, create a new one with welcome message
+        createNewChat();
+      }
     } else {
-      // Add welcome message if no previous messages
-      setMessages([{
-        text: "Hello! I'm your RAG Q&A assistant. Ask me anything about your documents.",
-        sender: 'ai',
-        timestamp: new Date().toISOString()
-      }]);
+      // If no chat history exists, create a new one with welcome message
+      createNewChat();
     }
   }, []);
 
-  // Save messages to local storage when they change
+  // Load messages for current chat
   useEffect(() => {
-    localStorage.setItem('chatMessages', JSON.stringify(messages));
-  }, [messages]);
+    if (currentChatId) {
+      const currentChat = chatHistory.find(chat => chat.id === currentChatId);
+      if (currentChat) {
+        setMessages(currentChat.messages);
+      }
+    }
+  }, [currentChatId, chatHistory]);
+
+  // Save chat history to local storage when it changes
+  useEffect(() => {
+    if (chatHistory.length > 0) {
+      localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+    }
+  }, [chatHistory]);
+
+  // Save current chat ID to local storage when it changes
+  useEffect(() => {
+    if (currentChatId) {
+      localStorage.setItem('currentChatId', currentChatId);
+    }
+  }, [currentChatId]);
 
   // Auto-scroll to bottom of messages
   useEffect(() => {
@@ -64,6 +96,54 @@ const ChatModel = () => {
     }
   };
 
+  // Create a new chat with welcome message
+  const createNewChat = () => {
+    const timestamp = new Date().toISOString();
+    const newChatId = `chat_${Date.now()}`;
+    const newChat = {
+      id: newChatId,
+      title: `Chat ${chatHistory.length + 1}`,
+      timestamp: timestamp,
+      messages: [{
+        text: "Hello! I'm your RAG Q&A assistant. Ask me anything about your documents.",
+        sender: 'ai',
+        timestamp: timestamp
+      }]
+    };
+    
+    setChatHistory(prevHistory => [newChat, ...prevHistory]);
+    setCurrentChatId(newChatId);
+    setMessages(newChat.messages);
+  };
+
+  // Select a chat from history
+  const selectChat = (chatId) => {
+    setCurrentChatId(chatId);
+  };
+
+  // Update chat history when messages change
+  const updateChatHistory = (updatedMessages) => {
+    setChatHistory(prevHistory => {
+      // Find the current chat in history
+      return prevHistory.map(chat => {
+        if (chat.id === currentChatId) {
+          // Update the chat title based on the first user message (if exists)
+          const firstUserMessage = updatedMessages.find(msg => msg.sender === 'user');
+          const chatTitle = firstUserMessage 
+            ? firstUserMessage.text.substring(0, 20) + (firstUserMessage.text.length > 20 ? '...' : '') 
+            : `New Chat ${prevHistory.findIndex(c => c.id === currentChatId) + 1}`;
+          
+          return {
+            ...chat,
+            messages: updatedMessages,
+            title: chatTitle
+          };
+        }
+        return chat;
+      });
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -85,7 +165,11 @@ const ChatModel = () => {
       isLoading: true
     };
     
-    setMessages([...messages, userMessage, tempAiMessage]);
+    const updatedMessages = [...messages, userMessage, tempAiMessage];
+    setMessages(updatedMessages);
+    // Update chat history with the new messages
+    updateChatHistory(updatedMessages);
+    
     setQuery('');
     setLoading(true);
   
@@ -119,6 +203,8 @@ const ChatModel = () => {
               timestamp: new Date().toISOString()
             };
           }
+          // Update chat history with the finalized messages
+          updateChatHistory(newMessages);
           return newMessages;
         });
       }
@@ -136,6 +222,8 @@ const ChatModel = () => {
             timestamp: new Date().toISOString() 
           };
         }
+        // Update chat history with the error message
+        updateChatHistory(newMessages);
         return newMessages;
       });
     } finally {
@@ -143,68 +231,91 @@ const ChatModel = () => {
     }
   };
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // const handleFileUpload = async (e) => {
+  //   const file = e.target.files[0];
+  //   if (!file) return;
 
-    setUploadedFile(file);
-    const formData = new FormData();
-    formData.append('file', file);
+  //   setUploadedFile(file);
+  //   const formData = new FormData();
+  //   formData.append('file', file);
 
-    try {
-      setLoading(true);
-      const response = await fetch('http://localhost:8080/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+  //   try {
+  //     setLoading(true);
+  //     const response = await fetch('http://localhost:8080/api/upload', {
+  //       method: 'POST',
+  //       body: formData,
+  //     });
 
-      if (response.ok) {
-        // Success message
-        setMessages(prevMessages => [
-          ...prevMessages,
-          { 
-            text: `File "${file.name}" was successfully uploaded and indexed.`, 
-            sender: 'system', 
-            timestamp: new Date().toISOString() 
-          }
-        ]);
-        // Refresh document list
-        fetchDocuments();
-      } else {
-        // Error message
-        setMessages(prevMessages => [
-          ...prevMessages,
-          { 
-            text: `Failed to upload file "${file.name}". Please check the file format.`, 
-            sender: 'system', 
-            timestamp: new Date().toISOString() 
-          }
-        ]);
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      setMessages(prevMessages => [
-        ...prevMessages,
-        { 
-          text: 'Error connecting to the server. Please try again later.', 
-          sender: 'system', 
-          timestamp: new Date().toISOString() 
-        }
-      ]);
-    } finally {
-      setLoading(false);
-      setUploadedFile(null);
-      e.target.value = null; // Reset file input
-    }
-  };
+  //     if (response.ok) {
+  //       const successMessage = { 
+  //         text: `File "${file.name}" was successfully uploaded and indexed.`, 
+  //         sender: 'system', 
+  //         timestamp: new Date().toISOString() 
+  //       };
+        
+  //       const updatedMessages = [...messages, successMessage];
+  //       setMessages(updatedMessages);
+  //       // Update chat history with the success message
+  //       updateChatHistory(updatedMessages);
+        
+  //       // Refresh document list
+  //       fetchDocuments();
+  //     } else {
+  //       const errorMessage = { 
+  //         text: `Failed to upload file "${file.name}". Please check the file format.`, 
+  //         sender: 'system', 
+  //         timestamp: new Date().toISOString() 
+  //       };
+        
+  //       const updatedMessages = [...messages, errorMessage];
+  //       setMessages(updatedMessages);
+  //       // Update chat history with the error message
+  //       updateChatHistory(updatedMessages);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error uploading file:', error);
+  //     const connectionErrorMessage = { 
+  //       text: 'Error connecting to the server. Please try again later.', 
+  //       sender: 'system', 
+  //       timestamp: new Date().toISOString() 
+  //     };
+      
+  //     const updatedMessages = [...messages, connectionErrorMessage];
+  //     setMessages(updatedMessages);
+  //     // Update chat history with the connection error message
+  //     updateChatHistory(updatedMessages);
+  //   } finally {
+  //     setLoading(false);
+  //     setUploadedFile(null);
+  //     e.target.value = null; // Reset file input
+  //   }
+  // };
 
   const startNewChat = () => {
-    setMessages([{
-      text: "Hello! I'm your RAG Q&A assistant. Ask me anything about your documents.",
-      sender: 'ai',
-      timestamp: new Date().toISOString()
-    }]);
+    createNewChat();
   };
+
+  // Delete a chat from history
+const deleteChat = (chatId, e) => {
+  e.stopPropagation(); // Prevent triggering the chat selection
+  
+  setChatHistory(prevHistory => {
+    const newHistory = prevHistory.filter(chat => chat.id !== chatId);
+    
+    // If we're deleting the current chat, clear the current chat ID
+    // This will show an empty chat area until user clicks "New Chat"
+    if (chatId === currentChatId) {
+      // Clear the current chat ID
+      setCurrentChatId(null);
+      // Clear the messages
+      setMessages([]);
+      // Also clear from localStorage
+      localStorage.removeItem('currentChatId');
+    }
+    
+    return newHistory;
+  });
+};
 
   const formatTimestamp = (timestamp) => {
     const date = new Date(timestamp);
@@ -217,6 +328,18 @@ const ChatModel = () => {
     });
   };
 
+  // Format chat timestamp for sidebar
+  const formatChatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', { 
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   // Loading animation component
   const LoadingDots = () => (
     <div className="flex space-x-1 mt-1">
@@ -225,6 +348,24 @@ const ChatModel = () => {
       <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
     </div>
   );
+
+
+  const EmptyChatState = () => (
+  <div className="flex flex-col items-center justify-center h-full text-gray-500">
+    <Bot size={48} className="mb-4 text-indigo-400" />
+    <p className="text-xl font-medium mb-2">No active chat</p>
+    <p className="text-sm mb-4">Create a new chat to start asking questions</p>
+    <button 
+      onClick={startNewChat}
+      className="bg-indigo-500 hover:bg-indigo-700 text-white rounded-md py-2 px-4 flex items-center justify-center transition-colors"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+      </svg>
+      Start New Chat
+    </button>
+  </div>
+);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -276,7 +417,42 @@ const ChatModel = () => {
             </button>
           </div>
           
-          {/* Document upload */}
+          {/* Chat history */}
+          <div className="p-4 border-b border-gray-700">
+            <h2 className="font-medium text-md mb-3 text-gray-300">Chat History</h2>
+            <div className="max-h-40 overflow-y-auto">
+              {chatHistory.length > 0 ? (
+                <ul className="space-y-1">
+                  {chatHistory.map((chat) => (
+                    <li 
+                      key={chat.id} 
+                      onClick={() => selectChat(chat.id)}
+                      className={`text-sm p-2 rounded transition-colors cursor-pointer flex justify-between items-center ${
+                        currentChatId === chat.id ? 'bg-gray-700' : 'hover:bg-gray-700'
+                      }`}
+                    >
+                      <div className="flex flex-col overflow-hidden">
+                        <span className="text-gray-300 truncate">{chat.title}</span>
+                        <span className="text-xs text-gray-400">{formatChatTimestamp(chat.timestamp)}</span>
+                      </div>
+                      <button 
+                        onClick={(e) => deleteChat(chat.id, e)}
+                        className="text-gray-400 hover:text-red-400 p-1"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-gray-400">No chat history</p>
+              )}
+            </div>
+          </div>
+          
+          {/* Document upload
           <div className="p-4 border-b border-gray-700">
             <h2 className="font-medium text-md mb-3 text-gray-300">Upload Document</h2>
             <label className="flex items-center justify-center w-full p-2 border border-gray-600 border-dashed rounded-md cursor-pointer hover:bg-gray-700 transition-colors">
@@ -292,20 +468,19 @@ const ChatModel = () => {
                 {uploadedFile.name}
               </p>
             )}
-          </div>
-
+          </div> */}
 
           {/* Document list */}
-          <div className="p-4 border-b border-gray-700">
+          {/* <div className="p-4 border-b border-gray-700">
             <h2 className="font-medium text-md mb-3 text-gray-300">Your Documents</h2>
-          </div>
+          </div> */}
           <div className="flex-1 overflow-y-auto p-2">
             {documents.length === 0 ? (
               <div>
-                <p className="text-sm text-gray-400 p-3">No user documents uploaded</p>
+                {/* <p className="text-sm text-gray-400 p-3">No user documents uploaded</p> */}
                 {/* Add the default PDF document */}
                 <div className="mt-2">
-                  <h3 className="text-sm text-gray-300 px-3 pb-2">Available Resources:</h3>
+                  <h3 className="text-sm text-gray-300 px-3 pb-2">Available Resource For Guide :</h3>
                   <button 
                     onClick={openPdfOverlay} 
                     className="flex items-center text-sm text-gray-300 p-2 hover:bg-gray-700 rounded transition-colors w-full text-left"
@@ -356,84 +531,89 @@ const ChatModel = () => {
         {/* Chat area */}
         <main className="flex-1 flex flex-col bg-white">
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <div className="max-w-3xl mx-auto space-y-6">
-              {messages.map((message, index) => (
-                <div 
-                  key={index} 
-                  className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div className={`max-w-xl rounded-lg px-4 py-3 ${
-                    message.sender === 'user' 
-                      ? 'bg-indigo-600 text-white' 
-                      : message.sender === 'system'
-                        ? 'bg-gray-200 text-gray-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {/* Message content */}
-                    <div className="text-sm">
-                      {message.isLoading ? (
-                        <>
-                          {message.text}
-                          <LoadingDots />
-                        </>
-                      ) : (
-                        <>
-                          {message.text}
-                          {message.sources && message.sources.length > 0 && (
-                            <div className="mt-3 pt-2 border-t border-gray-300 text-xs text-gray-600">
-                              <p className="font-semibold">Sources:</p>
-                              <ul className="mt-1 space-y-1">
-                                {message.sources.map((source, i) => (
-                                  <li key={i} className="flex items-start">
-                                    <span className="mr-1">•</span>
-                                    <span>{source}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </>
-                      )}
+          {/* Messages */}
+<div className="flex-1 overflow-y-auto p-4">
+  {currentChatId ? (
+    <div className="max-w-3xl mx-auto space-y-6">
+      {messages.map((message, index) => (
+        <div 
+          key={index} 
+          className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+        >
+          <div className={`max-w-xl rounded-lg px-4 py-3 ${
+            message.sender === 'user' 
+              ? 'bg-indigo-600 text-white' 
+              : message.sender === 'system'
+                ? 'bg-gray-200 text-gray-800'
+                : 'bg-gray-100 text-gray-800'
+            }`}
+          >
+            {/* Message content */}
+            <div className="text-sm">
+              {message.isLoading ? (
+                <>
+                  {message.text}
+                  <LoadingDots />
+                </>
+              ) : (
+                <>
+                  {message.text}
+                  {message.sources && message.sources.length > 0 && (
+                    <div className="mt-3 pt-2 border-t border-gray-300 text-xs text-gray-600">
+                      <p className="font-semibold">Sources:</p>
+                      <ul className="mt-1 space-y-1">
+                        {message.sources.map((source, i) => (
+                          <li key={i} className="flex items-start">
+                            <span className="mr-1">•</span>
+                            <span>{source}</span>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    
-                    <div className="text-xs mt-2 opacity-70">
-                      {formatTimestamp(message.timestamp)}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
+                  )}
+                </>
+              )}
+            </div>
+            
+            <div className="text-xs mt-2 opacity-70">
+              {formatTimestamp(message.timestamp)}
             </div>
           </div>
+        </div>
+      ))}
+      <div ref={messagesEndRef} />
+    </div>
+  ) : (
+    <EmptyChatState />
+  )}
+</div>
 
-          {/* Input area */}
-          <div className="border-t border-gray-200 bg-white p-4">
-            <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-              <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Ask a question..."
-                  className="flex-1 bg-transparent px-3 py-2 focus:outline-none"
-                  disabled={loading}
-                />
-                <button
-                  type="submit"
-                  className={`bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition-colors ${
-                    loading ? 'opacity-70 cursor-not-allowed' : ''
-                  }`}
-                  disabled={loading}
-                ><Send />
-                </button>
-              </div>
-              <div className="text-xs text-gray-500 mt-2 text-center">
-                RAG Q&A uses AI to answer questions based on your uploaded documentation
-              </div>
-            </form>
-          </div>
+{/* Input area */}
+<div className="border-t border-gray-200 bg-white p-4">
+  <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+    <div className="flex items-center bg-gray-100 rounded-lg p-1">
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Ask a question..."
+        className="flex-1 bg-transparent px-3 py-2 focus:outline-none"
+        disabled={loading || !currentChatId} // Disable when there's no current chat
+      />
+      <button
+        type="submit"
+        className={`bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition-colors ${
+          loading || !currentChatId ? 'opacity-70 cursor-not-allowed' : ''
+        }`}
+        disabled={loading || !currentChatId} // Disable when there's no current chat
+      ><Send />
+      </button>
+    </div>
+    <div className="text-xs text-gray-500 mt-2 text-center">
+      RAG Q&A uses AI to answer questions based on your uploaded documentation
+    </div>
+  </form>
+</div>
         </main>
       </div>
 
