@@ -34,8 +34,7 @@ const App = () => {
         />
         <Route 
           path="/vector" 
-          element={isAuthenticated ? <VectorEmbedding /> : <LoginForm />} 
-        />
+          element={isAuthenticated ? <VectorEmbedding /> : <LoginForm />} />
         
         {/* Fallback route */}
         <Route path="*" element={<LoginForm />} />

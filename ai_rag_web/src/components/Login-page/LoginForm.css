@@ -7,15 +7,15 @@
     padding: 1.5rem 1rem;
     width: 100%;
     max-width: 100%;
-    overflow-x: hidden;
+    overflow: hidden;
     box-sizing: border-box;
     position: relative;
   }
   
   /* To ensure body and html don't cause scrolling */
-  body, html {
+   body, html {
     margin: 0;
     padding: 0;
     overflow-x: hidden;
     width: 100%;
-  }
+  }  

@@ -1,4 +1,4 @@
-import { Bot, Send, LogOut } from 'lucide-react';
+import { Bot, Send, LogOut, History  } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -7,7 +7,7 @@ const ChatModel = () => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [documents, setDocuments] = useState([]);
-  const [uploadedFile, setUploadedFile] = useState(null);
+  // const [uploadedFile, setUploadedFile] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const messagesEndRef = useRef(null);
 
@@ -26,29 +26,40 @@ const ChatModel = () => {
     setIsPdfOverlayOpen(false);
   };
 
-  // Load chat history and current chat from local storage
-  useEffect(() => {
+  // Update the useEffect that loads chat history
+useEffect(() => {
+  try {
     const savedChatHistory = localStorage.getItem('chatHistory');
     const savedCurrentChatId = localStorage.getItem('currentChatId');
     
     if (savedChatHistory) {
       const parsedChatHistory = JSON.parse(savedChatHistory);
-      setChatHistory(parsedChatHistory);
       
-      // Set current chat ID from storage or use the first chat in history
-      if (savedCurrentChatId && parsedChatHistory.some(chat => chat.id === savedCurrentChatId)) {
-        setCurrentChatId(savedCurrentChatId);
-      } else if (parsedChatHistory.length > 0) {
-        setCurrentChatId(parsedChatHistory[0].id);
+      // Only set chat history if there are actually chats in the saved history
+      if (parsedChatHistory && Array.isArray(parsedChatHistory) && parsedChatHistory.length > 0) {
+        setChatHistory(parsedChatHistory);
+        
+        // Set current chat ID from storage or use the first chat in history
+        if (savedCurrentChatId && parsedChatHistory.some(chat => chat.id === savedCurrentChatId)) {
+          setCurrentChatId(savedCurrentChatId);
+        } else {
+          setCurrentChatId(parsedChatHistory[0].id);
+        }
       } else {
-        // If no chat history, create a new one with welcome message
+        // If parsed history is empty or invalid, clear localStorage and create new chat
+        localStorage.removeItem('currentChatId');
+        localStorage.removeItem('chatHistory');
         createNewChat();
       }
-    } else {
-      // If no chat history exists, create a new one with welcome message
-      createNewChat();
     }
-  }, []);
+  } catch (error) {
+    // Handle any parsing errors by clearing localStorage and creating a new chat
+    console.error('Error loading chat history:', error);
+    localStorage.removeItem('chatHistory');
+    localStorage.removeItem('currentChatId');
+    createNewChat();
+  }
+}, []);
 
   // Load messages for current chat
   useEffect(() => {
@@ -64,6 +75,8 @@ const ChatModel = () => {
   useEffect(() => {
     if (chatHistory.length > 0) {
       localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+    }else{
+      localStorage.removeItem('chatHistory');
     }
   }, [chatHistory]);
 
@@ -80,21 +93,21 @@ const ChatModel = () => {
   }, [messages]);
 
   // Fetch list of uploaded documents
-  useEffect(() => {
-    fetchDocuments();
-  }, []);
+  // useEffect(() => {
+  //   fetchDocuments();
+  // }, []);
 
-  const fetchDocuments = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/documents');
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(data);
-      }
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-    }
-  };
+  // const fetchDocuments = async () => {
+  //   try {
+  //     const response = await fetch('http://localhost:8080/api/documents');
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       setDocuments(data);
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching documents:', error);
+  //   }
+  // };
 
   // Create a new chat with welcome message
   const createNewChat = () => {
@@ -102,7 +115,7 @@ const ChatModel = () => {
     const newChatId = `chat_${Date.now()}`;
     const newChat = {
       id: newChatId,
-      title: `Chat ${chatHistory.length + 1}`,
+      title: `New Chat - ${chatHistory.length + 1}`,
       timestamp: timestamp,
       messages: [{
         text: "Hello! I'm your RAG Q&A assistant. Ask me anything about your documents.",
@@ -300,16 +313,23 @@ const deleteChat = (chatId, e) => {
   e.stopPropagation(); // Prevent triggering the chat selection
   
   setChatHistory(prevHistory => {
+    // Filter out the chat to be deleted
     const newHistory = prevHistory.filter(chat => chat.id !== chatId);
     
-    // If we're deleting the current chat, clear the current chat ID
-    // This will show an empty chat area until user clicks "New Chat"
+    // If we're deleting the current chat
     if (chatId === currentChatId) {
-      // Clear the current chat ID
+      // Clear the current chat ID and messages
       setCurrentChatId(null);
-      // Clear the messages
       setMessages([]);
-      // Also clear from localStorage
+      
+      // Remove from localStorage
+      localStorage.removeItem('currentChatId');
+    }
+    
+    // Handle empty history case - this is critical for proper cleanup
+    if (newHistory.length === 0) {
+      // This needs to be done synchronously within this function
+      localStorage.removeItem('chatHistory');
       localStorage.removeItem('currentChatId');
     }
     
@@ -349,23 +369,58 @@ const deleteChat = (chatId, e) => {
     </div>
   );
 
-
-  const EmptyChatState = () => (
-  <div className="flex flex-col items-center justify-center h-full text-gray-500">
-    <Bot size={48} className="mb-4 text-indigo-400" />
-    <p className="text-xl font-medium mb-2">No active chat</p>
-    <p className="text-sm mb-4">Create a new chat to start asking questions</p>
-    <button 
-      onClick={startNewChat}
-      className="bg-indigo-500 hover:bg-indigo-700 text-white rounded-md py-2 px-4 flex items-center justify-center transition-colors"
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-      </svg>
-      Start New Chat
-    </button>
-  </div>
-);
+const EmptyChatState = () => {
+  // Animation states using React's useState
+  const [isVisible, setIsVisible] = useState(false);
+  
+  // Use useEffect to trigger the animation after component mount
+  useEffect(() => {
+    // Small delay before starting animation for better visual effect
+    const timer = setTimeout(() => {
+      setIsVisible(true);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  return (
+    <div className=" flex flex-col items-center justify-center h-full text-gray-500 rounded-lg">
+      <div className='mb-8'>
+        <h2>Hii Dear, Welcome to your RAG AI Q&A Assistant.</h2>
+      </div>
+      {/* Bot icon with pulse animation */}
+      <div className={`transition-all duration-700 ease-out transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'}`}>
+        <div className="relative">
+          {/* <Bot size={64} className="text-indigo-400 relative z-10" /> */}
+          <img src="/favicon_io/freepik__background__67311.png" alt="icon" className="h-22 w-20 mr-2" />
+          <div className="absolute inset-0 bg-indigo-300 rounded-full animate-ping opacity-30"></div>
+        </div>
+      </div>
+      
+      {/* Text elements with staggered fade-in */}
+      <p className={`text-2xl font-medium mb-2 mt-6 transition-all duration-700 delay-300 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+        No active chat
+      </p>
+      
+      <p className={`text-sm mb-6 text-gray-400 transition-all duration-700 delay-500 ease-out ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+        Create a new chat to start asking questions
+      </p>
+      
+      {/* Button with fade-in and subtle bounce */}
+      <div className={`transition-all duration-700 delay-700 ease-out transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+        <button 
+          onClick={startNewChat}
+          className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg py-3 px-6 flex items-center justify-center transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 active:translate-y-0"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Start New Chat
+        </button>      
+      </div>      
+    </div>
+  );
+};
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -381,11 +436,8 @@ const deleteChat = (chatId, e) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            
-            <div className='flex gap-2'>
-            <div className="text-xl font-bold">RAG Q&A Assistant</div> 
-              <div><Bot /></div>
-            </div>
+      
+            <div className="text-xl font-bold">RAG Q&A Assistant</div>       
           </div>
           <div className="text-sm">
             {new Date().toLocaleString('en-US', { 
@@ -419,7 +471,10 @@ const deleteChat = (chatId, e) => {
           
           {/* Chat history */}
           <div className="p-4 border-b border-gray-700">
-            <h2 className="font-medium text-md mb-3 text-gray-300">Chat History</h2>
+            <div className='flex justify-between items-center'>
+              <h2 className="font-medium text-md mb-3 text-gray-300">Chat History </h2>
+              <History className="w-4 h-4 mb-1 text-gray-300" />
+            </div>
             <div className="max-h-40 overflow-y-auto">
               {chatHistory.length > 0 ? (
                 <ul className="space-y-1">
@@ -531,89 +586,97 @@ const deleteChat = (chatId, e) => {
         {/* Chat area */}
         <main className="flex-1 flex flex-col bg-white">
           {/* Messages */}
-          {/* Messages */}
-<div className="flex-1 overflow-y-auto p-4">
-  {currentChatId ? (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {messages.map((message, index) => (
-        <div 
-          key={index} 
-          className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-        >
-          <div className={`max-w-xl rounded-lg px-4 py-3 ${
-            message.sender === 'user' 
-              ? 'bg-indigo-600 text-white' 
-              : message.sender === 'system'
-                ? 'bg-gray-200 text-gray-800'
-                : 'bg-gray-100 text-gray-800'
-            }`}
-          >
-            {/* Message content */}
-            <div className="text-sm">
-              {message.isLoading ? (
-                <>
-                  {message.text}
-                  <LoadingDots />
-                </>
-              ) : (
-                <>
-                  {message.text}
-                  {message.sources && message.sources.length > 0 && (
-                    <div className="mt-3 pt-2 border-t border-gray-300 text-xs text-gray-600">
-                      <p className="font-semibold">Sources:</p>
-                      <ul className="mt-1 space-y-1">
-                        {message.sources.map((source, i) => (
-                          <li key={i} className="flex items-start">
-                            <span className="mr-1">•</span>
-                            <span>{source}</span>
-                          </li>
-                        ))}
-                      </ul>
+          <div className="flex-1 overflow-y-auto p-4">
+            {currentChatId ? (
+              <div className="max-w-3xl mx-auto space-y-6">
+                {messages.map((message, index) => (
+                  <div 
+                    key={index} 
+                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {message.sender === 'ai' && (
+                        <div className="flex-shrink-0 mr-3">
+                          <img 
+                            src="/favicon_io/freepik__background__67311.png" 
+                            alt="AI Assistant" 
+                            className="h-8 w-8 rounded-full object-cover border-2 border-indigo-100"
+                          />
+                        </div>
+                    )}
+                    <div className={`max-w-xl rounded-lg px-4 py-3 ${
+                      message.sender === 'user' 
+                        ? 'bg-indigo-600 text-white' 
+                        : message.sender === 'system'
+                          ? 'bg-gray-200 text-gray-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {/* Message content */}
+                      <div className="text-sm">
+                        {message.isLoading ? (
+                          <>
+                            {message.text}
+                            <LoadingDots />
+                          </>
+                        ) : (
+                          <>
+                            {message.text}
+                            {message.sources && message.sources.length > 0 && (
+                              <div className="mt-3 pt-2 border-t border-gray-300 text-xs text-gray-600">
+                                <p className="font-semibold">Sources:</p>
+                                <ul className="mt-1 space-y-1">
+                                  {message.sources.map((source, i) => (
+                                    <li key={i} className="flex items-start">
+                                      <span className="mr-1">•</span>
+                                      <span>{source}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                      
+                      <div className="text-xs mt-2 opacity-70">
+                        {formatTimestamp(message.timestamp)}
+                      </div>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
-            
-            <div className="text-xs mt-2 opacity-70">
-              {formatTimestamp(message.timestamp)}
-            </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            ) : (
+              <EmptyChatState />
+            )}
           </div>
-        </div>
-      ))}
-      <div ref={messagesEndRef} />
-    </div>
-  ) : (
-    <EmptyChatState />
-  )}
-</div>
 
-{/* Input area */}
-<div className="border-t border-gray-200 bg-white p-4">
-  <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-    <div className="flex items-center bg-gray-100 rounded-lg p-1">
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Ask a question..."
-        className="flex-1 bg-transparent px-3 py-2 focus:outline-none"
-        disabled={loading || !currentChatId} // Disable when there's no current chat
-      />
-      <button
-        type="submit"
-        className={`bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition-colors ${
-          loading || !currentChatId ? 'opacity-70 cursor-not-allowed' : ''
-        }`}
-        disabled={loading || !currentChatId} // Disable when there's no current chat
-      ><Send />
-      </button>
-    </div>
-    <div className="text-xs text-gray-500 mt-2 text-center">
-      RAG Q&A uses AI to answer questions based on your uploaded documentation
-    </div>
-  </form>
-</div>
+          {/* Input area */}
+          <div className="border-t border-gray-200 bg-white p-4">
+            <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+              <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Ask a question..."
+                  className="flex-1 bg-transparent px-3 py-2 focus:outline-none"
+                  disabled={loading || !currentChatId} // Disable when there's no current chat
+                />
+                <button
+                  type="submit"
+                  className={`bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition-colors ${
+                    loading || !currentChatId ? 'opacity-70 cursor-not-allowed' : ''
+                  }`}
+                  disabled={loading || !currentChatId} // Disable when there's no current chat
+                ><Send />
+                </button>
+              </div>
+              <div className="text-xs text-gray-500 mt-2 text-center">
+                RAG Q&A uses AI to answer questions based on your uploaded documentation
+              </div>
+            </form>
+          </div>
         </main>
       </div>
 
