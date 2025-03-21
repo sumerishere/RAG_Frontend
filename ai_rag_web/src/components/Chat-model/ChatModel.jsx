@@ -205,21 +205,21 @@ useEffect(() => {
         // Trim extra whitespace
         cleanedResponse = cleanedResponse.trim();
         
-        // Replace temporary message with the cleaned response
-        setMessages(prevMessages => {
-          const newMessages = [...prevMessages];
-          const tempIndex = newMessages.findIndex(msg => msg.isLoading);
-          if (tempIndex !== -1) {
-            newMessages[tempIndex] = { 
-              text: cleanedResponse, 
-              sender: 'ai', 
-              timestamp: new Date().toISOString()
-            };
-          }
-          // Update chat history with the finalized messages
-          updateChatHistory(newMessages);
-          return newMessages;
-        });
+        // Replace this part in your handleSubmit function where you update the message
+setMessages(prevMessages => {
+  const newMessages = [...prevMessages];
+  const tempIndex = newMessages.findIndex(msg => msg.isLoading);
+  if (tempIndex !== -1) {
+    newMessages[tempIndex] = { 
+      text: cleanedResponse, 
+      sender: 'ai', 
+      timestamp: new Date().toISOString()
+    };
+  }
+  // Update chat history with the finalized messages
+  updateChatHistory(newMessages);
+  return newMessages;
+});
       }
   
     } catch (error) {
@@ -243,6 +243,40 @@ useEffect(() => {
       setLoading(false);
     }
   };
+
+
+  // Add this function to format message content properly
+const formatMessageContent = (content) => {
+  if (!content) return '';
+
+  // Convert markdown bold formatting (** **) to HTML bold tags
+  content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+  // Convert numbered lists (1. Item, 2. Item format)
+  content = content.replace(/(\d+\.\s+.*?)(?=\n\d+\.|$)/gs, '<li>$1</li>');
+  if (content.includes('<li>')) {
+    content = '<ol>' + content + '</ol>';
+  }
+  
+  // Convert bullet points (• Item format)
+  content = content.replace(/(•\s+.*?)(?=\n•|$)/gs, '<li>$1</li>');
+  if (content.includes('<li>•')) {
+    content = content.replace(/<li>•\s+/g, '<li>');
+    content = '<ul>' + content + '</ul>';
+  }
+  
+  // Handle paragraphs
+  content = content.replace(/\n\n/g, '</p><p>');
+  content = '<p>' + content + '</p>';
+  
+  // Clean up any potential double wrapping
+  content = content.replace(/<p><ol>/g, '<ol>');
+  content = content.replace(/<\/ol><\/p>/g, '</ol>');
+  content = content.replace(/<p><ul>/g, '<ul>');
+  content = content.replace(/<\/ul><\/p>/g, '</ul>');
+  
+  return content;
+}
 
   // const handleFileUpload = async (e) => {
   //   const file = e.target.files[0];
@@ -386,7 +420,7 @@ const EmptyChatState = () => {
   return (
     <div className=" flex flex-col items-center justify-center h-full text-gray-500 rounded-lg">
       <div className='mb-8'>
-        <h2>Hii Dear, Welcome to your RAG AI Q&A Assistant.</h2>
+        <h2>Hii Dear, Feel free to ask your queries.</h2>
       </div>
       {/* Bot icon with pulse animation */}
       <div className={`transition-all duration-700 ease-out transform ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-3'}`}>
@@ -620,7 +654,10 @@ const EmptyChatState = () => {
                           </>
                         ) : (
                           <>
-                            {message.text}
+                            {/* Use a markdown parser or properly format the structured content */}
+                            <div dangerouslySetInnerHTML={{ 
+                              __html: formatMessageContent(message.text) 
+                            }} />
                             {message.sources && message.sources.length > 0 && (
                               <div className="mt-3 pt-2 border-t border-gray-300 text-xs text-gray-600">
                                 <p className="font-semibold">Sources:</p>
@@ -637,7 +674,6 @@ const EmptyChatState = () => {
                           </>
                         )}
                       </div>
-                      
                       <div className="text-xs mt-2 opacity-70">
                         {formatTimestamp(message.timestamp)}
                       </div>
