@@ -1,4 +1,4 @@
-import { Bot, Send, LogOut, History  } from 'lucide-react';
+import { Send, LogOut, History  } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -16,6 +16,25 @@ const ChatModel = () => {
   const [currentChatId, setCurrentChatId] = useState(null);
 
   const [isPdfOverlayOpen, setIsPdfOverlayOpen] = useState(false);
+
+  const [logoutConfirmation, setLogoutConfirmation] = useState({
+    isOpen: false
+  });
+
+
+  const handleLogoutConfirmation = () => {
+    setLogoutConfirmation({
+      isOpen: true
+    });
+  };
+  
+  const handleCancelLogout = () => {
+    setLogoutConfirmation({
+      isOpen: false
+    });
+  };
+
+
 
   const openPdfOverlay = (e) => {
     e.preventDefault();
@@ -109,8 +128,9 @@ useEffect(() => {
   //   }
   // };
 
-  // Create a new chat with welcome message
-  const createNewChat = () => {
+  
+  const createNewChat = () => {     // Create a new chat with welcome message
+
     const timestamp = new Date().toISOString();
     const newChatId = `chat_${Date.now()}`;
     const newChat = {
@@ -206,20 +226,20 @@ useEffect(() => {
         cleanedResponse = cleanedResponse.trim();
         
         // Replace this part in your handleSubmit function where you update the message
-setMessages(prevMessages => {
-  const newMessages = [...prevMessages];
-  const tempIndex = newMessages.findIndex(msg => msg.isLoading);
-  if (tempIndex !== -1) {
-    newMessages[tempIndex] = { 
-      text: cleanedResponse, 
-      sender: 'ai', 
-      timestamp: new Date().toISOString()
-    };
-  }
-  // Update chat history with the finalized messages
-  updateChatHistory(newMessages);
-  return newMessages;
-});
+        setMessages(prevMessages => {
+          const newMessages = [...prevMessages];
+          const tempIndex = newMessages.findIndex(msg => msg.isLoading);
+          if (tempIndex !== -1) {
+            newMessages[tempIndex] = { 
+              text: cleanedResponse, 
+              sender: 'ai', 
+              timestamp: new Date().toISOString()
+            };
+          }
+          // Update chat history with the finalized messages
+          updateChatHistory(newMessages);
+          return newMessages;
+        });
       }
   
     } catch (error) {
@@ -456,6 +476,9 @@ const EmptyChatState = () => {
   );
 };
 
+
+
+
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Header */}
@@ -606,11 +629,11 @@ const EmptyChatState = () => {
             )}
           </div>
           <div className='px-4'>
-            <Link to="/login">
-              <button className="w-full bg-gray-600 text-md hover:bg-gray-700 text-white rounded-md py-2 px-4 flex items-center justify-center transition-colors">
+              <button 
+                onClick={() => handleLogoutConfirmation()}
+                className="w-full bg-gray-600 text-md hover:bg-gray-700 text-white rounded-md py-2 px-4 flex items-center justify-center transition-colors">
                 Log-Out <span className='ml-2'>< LogOut/></span>
               </button>
-            </Link>
           </div>
           <div className='text-sm text-gray-400 p-3 mt-2 mb-5'>
           ©{new Date().getFullYear()} | Developed by Sumer Khan
@@ -741,6 +764,37 @@ const EmptyChatState = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {logoutConfirmation.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex justify-center items-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h2 className="text-xl font-bold mb-4 text-center">
+              Confirm LogOut
+            </h2>
+            <p className="text-gray-600 mb-6 text-center">
+              Are you sure you want to logout?
+            </p>
+            <div className="flex justify-center space-x-4">
+              <button
+                // onClick={handleCancelLogout}
+                onClick={handleCancelLogout}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+
+              <Link to="/login">
+                <button
+                  className="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600">
+                  Yes
+                </button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
