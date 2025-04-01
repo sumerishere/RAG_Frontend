@@ -744,7 +744,7 @@ return (
     {/* logout Confirmation notify Modal */}
     {logoutConfirmation.isOpen && (
       <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex justify-center items-center overlay">
-        <div className="bg-white p-6 rounded-lg shadow-xl w-96  slide-in">
+        <div className="bg-white p-6 rounded-lg shadow-xl w-96 slide-in">
           <h2 className="text-xl font-bold mb-4 text-center">
             Confirm LogOut
           </h2>

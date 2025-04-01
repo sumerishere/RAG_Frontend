@@ -16,9 +16,8 @@ const App = () => {
     setAuthChecked(true);
   }, []);
 
-  // Don't render anything until we've checked authentication
   if (!authChecked) {
-    return null; // or a loading spinner
+    return <div className="loading-spinner">Loading...</div>;
   }
 
   return (
