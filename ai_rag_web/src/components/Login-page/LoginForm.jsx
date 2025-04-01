@@ -1,6 +1,6 @@
 import "./LoginForm.css";   
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 
 const LoginForm = () => {
@@ -90,11 +90,9 @@ const LoginForm = () => {
           <h2 className="text-2xl font-bold text-gray-900">RAG AI Bot</h2>
           <p className="mt-1 text-sm text-gray-600">Sign in to your account</p>
         </div>
-        
-        {/* Card with glassmorphism effect */}
+    
         <div className="mt-5 bg-white bg-opacity-80 backdrop-filter backdrop-blur-lg rounded-lg shadow-lg p-6 border border-gray-200">
-          
-          {/* Logo or icon */}
+
           <div className="flex justify-center mb-4">
             <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center border-gray-400">
              <img src="/favicon_io/freepik__background__67311.png" alt="icon" className="" />
@@ -250,13 +248,12 @@ const LoginForm = () => {
         <div className="mt-3 text-center">
           <p className="text-xs text-gray-600">
             Don't have an account?{" "}
-            <a href="#" className="font-medium text-indigo-700 hover:text-indigo-600">
-              Sign up
-            </a>
+            <Link to = "/signup">
+            <span className="text-indigo-700">Sign up</span>
+            </Link>
           </p>
         </div>
         
-        {/* Decorative elements for futuristic look - smaller and more subtle */}
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-indigo-700 rounded-full opacity-10"></div>
         <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-16 h-16 bg-indigo-500 rounded-full opacity-10"></div>
         <div className="absolute top-1/3 left-0 -ml-12 w-12 h-12 bg-indigo-300 rounded-full opacity-10"></div>

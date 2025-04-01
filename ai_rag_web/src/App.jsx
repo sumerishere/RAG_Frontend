@@ -4,6 +4,7 @@ import ChatModel from './components/Chat-model/ChatModel';
 import VectorEmbedding from "./components/vector-embedding/VectorEmb";
 import LoginForm from './components/Login-page/LoginForm';
 import { useEffect, useState } from 'react';
+import SignUpForm from './components/SignUp-page/SignUpForm';
 
 const App = () => {
   const [authChecked, setAuthChecked] = useState(false);
@@ -17,7 +18,9 @@ const App = () => {
   }, []);
 
   if (!authChecked) {
-    return <div className="loading-spinner">Loading...</div>;
+    return <div className="flex justify-center items-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-indigo-600 border-t-transparent"></div>
+           </div>;
   }
 
   return (
@@ -31,6 +34,12 @@ const App = () => {
           path="/home" 
           element={isAuthenticated ? <ChatModel /> : <LoginForm />} 
         />
+
+        <Route
+          path = "/signup"
+          element ={<SignUpForm/>}
+        />
+
         <Route 
           path="/vector" 
           element={isAuthenticated ? <VectorEmbedding /> : <LoginForm />} />
